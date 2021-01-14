@@ -8,6 +8,18 @@ const enter_gamecode = document.getElementById('enter_gamecode')
 const messages = document.getElementById('messages')
 const whiteSquareGrey = '#a9a9a9'
 const blackSquareGrey = '#696969'
+
+var firebaseConfig = {
+    apiKey: "AIzaSyC2wrEDLVjqyuehSdyQJjDHQJoE74qo4gI",
+    authDomain: "chess-73d61.firebaseapp.com",
+    projectId: "chess-73d61",
+    storageBucket: "chess-73d61.appspot.com",
+    messagingSenderId: "718909950248",
+    appId: "1:718909950248:web:36459917950c88b1c9281d"
+}
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+
 const db = firebase.firestore()
 
 var game = new Chess()
