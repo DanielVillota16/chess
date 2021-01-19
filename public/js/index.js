@@ -30,6 +30,11 @@ var game_on = false
 
 var current_game_id = ''
 
+var last_msg = {
+    msg:'', 
+    time: null
+}
+
 var config = {
     draggable: true,
     position: 'start',
@@ -55,6 +60,7 @@ create_game_btn.addEventListener('click', async (e)=>{
                 last_move: null,
                 ready_player1: true,
                 ready_player2: false,
+                last_msg:last_msg
                 })
             onWaitForPlayerResponse()
         }
@@ -62,29 +68,34 @@ create_game_btn.addEventListener('click', async (e)=>{
 })
 
 enter_game_btn.addEventListener('click', (e)=>{
-    let code = enter_gamecode.value;
+    let code = enter_gamecode.value
     if(!game_on){
         db.collection('games').doc(code).get().then((doc)=>{
             if(doc.exists){
                 game_on = true
                 current_game_id = code
-                enter_game(code)
+                enter_game()
             }
         })
     }
 })
 
-async function enter_game(code){
-    await db.collection('games').doc(code).set({
-        id:current_game_id,
-        ready_player1:true,
-        ready_player2:true,
-        last_move:null
-    })
-    
+send_btn.addEventListener('click', (e)=>{
+    let msg = playing_white? 'player1: '+ message_in.value: 'player2: '+ message_in.value
+    let msg_obj = {msg:msg, time: new Date().getTime()}
+    if(game_on){
+        db.collection('games').doc(current_game_id).update({last_msg:msg_obj})
+    } else {
+        messages.innerHTML += msg
+    }
+    message_in.value = ''
+})
+
+
+async function enter_game(){
+    await db.collection('games').doc(current_game_id).update({ready_player2:true})
     playing_white = false
     board.orientation('flip')
-    board.start()
     updateStatus()
     onWaitForPlayerResponse()
 }
@@ -96,7 +107,6 @@ function onWaitForPlayerResponse(){
         if(!game_on){
             if(gamedata.ready_player2){
                 game_on = true
-                board.start()
                 updateStatus()
             }
         } else {
@@ -104,6 +114,10 @@ function onWaitForPlayerResponse(){
                 game.move(gamedata.last_move)
                 board.position(game.fen())
                 updateStatus()
+            }
+            if(last_msg.time != gamedata.last_msg.time) {
+                last_msg = gamedata.last_msg
+                messages.value += last_msg.msg + '\n'
             }
         }
     })
@@ -151,7 +165,7 @@ function greySquare (square) {
 
 function onDragStart (source, piece, position, orientation) {
     // do not pick up pieces if the game is over
-    if (game.game_over()) return false
+    if (game.game_over() || !game_on) return false
 
     if(playing_white && game.turn()=='b' || !playing_white && game.turn()=='w') return false
     // only pick up pieces for the side to move
@@ -171,13 +185,9 @@ function onDrop (source, target) {
 
     // illegal move
     if (move === null) return 'snapback'
+    
     //update lastmove in database
-    db.collection('games').doc(current_game_id).set({
-        id:current_game_id,
-        ready_player1:true,
-        ready_player2:true,
-        last_move:move
-    })
+    db.collection('games').doc(current_game_id).update({last_move:move})
     updateStatus()
 }
 
